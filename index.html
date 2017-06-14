@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Example</title>
+    <meta charset='utf-8' />
+    <link rel="icon" type="image/png" href="/img/favicon.png" />
+    <META NAME="ROBOTS" CONTENT="NOINDEX,FOLLOW"/>
+    <META NAME="ROBOTS" CONTENT="NONE"/>
+    <META HTTP-EQUIV="EXPIRES" CONTENT="0"/>
+    <META HTTP-EQUIV="CACHE-CONTROL" CONTENT="NO-CACHE"/>
+    <!--<META HTTP-EQUIV="EXPIRES" CONTENT="Mon, 22 Jul 2002 11:12:01 GMT"> -->
+
+    <link rel=stylesheet type="text/css" href="/css/custom.css">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  </head>
+  <body>
+    <!--Add buttons to initiate auth sequence and sign out-->
+    <button id="authorize-button" style="display: none;">Get File List</button>
+    <div id="content"></div>
+
+
+    <script type="text/javascript">
+      // Client ID and API key from the Developer Console
+      var API_KEY = 'AIzaSyAwoMfos7xofe0d6u1sMoeGXVfNNQrtoSc';
+      var CLIENT_ID = '369661483799-4p5dv4gbnngfuh8ce8brfc3a03ucmbp5.apps.googleusercontent.com';
+
+      // Array of API discovery doc URLs for APIs
+      var DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+
+      // Authorization scopes required by the API; multiple scopes can be
+      // included, separated by spaces.
+      var SCOPES = 'https://www.googleapis.com/auth/drive.metadata.readonly';
+
+      var authorizeButton = document.getElementById('authorize-button');
+
+      // ID for google drive public folder
+      var PUB_FOLDER = '0B69rc32vOTFYSWdEUE1SMXRhUlU';
+
+      /* by fearphage@stackoverflow
+         https://stackoverflow.com/questions/610406/javascript-equivalent-to-printf-string-format/4673436#4673436
+      */
+      if (!String.prototype.fmt) {
+        String.prototype.fmt = function() {
+          var args = arguments;
+          return this.replace(/{(\d+)}/g, function(match, number) {
+            return typeof args[number] != 'undefined'
+              ? args[number]
+              : match;
+          });
+        };
+      }
+
+      function handleGetfile(e, fd) {
+        // create an iframe embbeding google doc viewer
+        var iframe = $('<iframe></iframe>')
+          .attr('src', "https://docs.google.com/viewer?srcid={0}&pid=explorer&efh=false&a=v&embedded=true".fmt(fd.id))
+          .attr('width', '100%')
+          .attr('height', '800');
+          // TODO fix screen resolution
+        // replace dialog content
+        $("#dialog").html(iframe);
+      }
+
+      function handleListfile() {
+        // query documents from google drive
+        gapi.client.drive.files.list({
+          'q': "'{0}' in parents".fmt(PUB_FOLDER),
+          'orderBy': 'createdTime desc',
+          'pageSize': 10,
+        }).then(function (resp) {
+          $("#content").empty();
+          // create links for each doc
+          $.each(resp.result.files, function (idx, val) {
+            var elm = $("<div></div>").text(idx + ':' + val.name)
+              .attr('data-toggle', "modal")
+              .attr('data-target', "#myModal")
+              .click(function(e) {handleGetfile(e, val)});
+            $("#content").append(elm);
+          })
+        })
+      }
+
+      function start() {
+        gapi.client.init({
+            discoveryDocs: DISCOVERY_DOCS,
+            clientId: CLIENT_ID, // Can be ignored if not doing Oauth
+            apiKey: API_KEY,
+            scope: SCOPES
+        }).then(function () {
+            authorizeButton.style.display = 'block';
+            authorizeButton.onclick = handleListfile;
+        })
+      }
+      /**
+       *  On load, called to load API client library.
+       */
+      function handleClientLoad() {
+        gapi.load('client', start);
+      }
+    </script>
+
+    <script async defer src="https://apis.google.com/js/api.js" onload="this.onload=function(){};handleClientLoad()" onreadystatechange="if (this.readyState === 'complete') this.onload()"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha256-k2WSCIexGzOj3Euiig+TlR8gA0EmPjuc79OEeY5L45g=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+  </body>
+  <div class="modal fade" id="myModal" role="dialog">
+    <div class="modal-dialog modal-lg" id="dialog">
+    </div>
+  </div>
+</html>
